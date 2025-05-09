@@ -65,14 +65,12 @@ def transform_data(df):
     
     # Further filter customers based on recent activity
     selection2 = selection1.T[selection1.tail(6).isna().sum() != 6].T
-    selection2_o = selection1_o[
-        selection1_o.columns[selection1_o.columns.isin(list(selection2.columns))]
-    ]
+    selection2_o = selection1_o.loc[selection1_o.index[selection1_o.index.isin(selection2.columns)]]
     
     return selection2, selection2_o
 
 if __name__ == "__main__":
     df = pd.read_csv('./data/raw/plant_ids.csv')
     invoices, orders = transform_data(df)
-    invoices.to_csv('./data/processed/invoices.csv', index=False)
-    orders.to_csv('./data/processed/orders.csv', index=False)
+    invoices.to_csv('./data/processed/invoices.csv', index=True)
+    orders.to_csv('./data/processed/orders.csv', index=True)
