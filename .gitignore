@@ -176,3 +176,7 @@ cython_debug/
 # Text files
 *.csv
 *.json
+data/processed/invoices.csv
+data/processed/orders.csv
+data/raw/plant_ids.csv
+.gitignore
