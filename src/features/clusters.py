@@ -127,7 +127,7 @@ def reverse_clusters(cluster_map):
             new_label = f"{plant}_{label}"
             if new_label not in reversed_map:
                 reversed_map[new_label] = []
-            reversed_map[new_label].append(str(customer))
+            reversed_map[new_label].append(f'{customer}_{plant}')
     return reversed_map
 
 def create_hierarchical_dataset(labelled, labels, original_data, cluster_number):
@@ -162,11 +162,11 @@ def create_hierarchical_dataset(labelled, labels, original_data, cluster_number)
             ), axis=1)
     
     customer_filtered = pd.concat(
-        (i.reset_index().groupby(['Date', 'customer_id'])[0]
-        .sum().unstack() for i in labelled_filtered.values()), axis=1)
-    
+        (j.reset_index().groupby(['Date', 'customer_id'])[0]
+        .sum().unstack().add_suffix('_'+i) for i,j in labelled_filtered.items()), axis=1)
+
     customer_filtered.columns = customer_filtered.columns.map(str)
-    
+
     hierarchy_df = customer_filtered.join(label_filtered) \
                                 .join(plant_filtered).join(total_filtered)
     hierarchy_df.index = pd.to_datetime(hierarchy_df.index)
@@ -186,10 +186,10 @@ def create_hierarchical_dataset(labelled, labels, original_data, cluster_number)
     for cluster_label in label.keys():
         zz = []
         for customer in hierarchy_dict[cluster_label]:
-            zz.append(cluster_label + '_' + customer)
-            ddd[customer] = cluster_label + '_' + customer
+            zz.append(cluster_label + '_' + customer.split('_')[0])
+            ddd[customer] = cluster_label + '_' + customer.split('_')[0]
         hierarchy_dict[cluster_label] = zz
-    
+
     hierarchy_df.columns = [i if i not in ddd else ddd[i] for i in hierarchy_df.columns]
     
     # split into train and test
@@ -208,7 +208,12 @@ def main():
     df = pd.read_csv('../../data/raw/plant_ids.csv')
     df.Date = pd.to_datetime(df.Date).dt.tz_localize(None)
     df = df.set_index('Date').sort_index().reset_index()
+    #df = df.query('Logic=="model"')
 
+    #multi_plant_filter = df.groupby('customer_id')['Plant'].nunique() > 1
+    #multi_plant_customers = multi_plant_filter[multi_plant_filter].index.tolist()
+    #df = df[~df['customer_id'].isin(multi_plant_customers)]
+    
     if os.path.exists('../../src/utils/cluster_number.json'):
         with open('../../src/utils/cluster_number.json', 'r') as f:
             cluster_number = json.load(f)
@@ -223,8 +228,8 @@ def main():
         
     df_train, df_test, hierarchy_dict = create_hierarchical_dataset(labelled, labels, df, cluster_number)
 
-    df_train.to_csv('../../data/processed/hierarchy_train.csv', index=False)
-    df_test.to_csv('../../data/processed/hierarchy_test.csv', index=False)
+    df_train.to_csv('../../data/processed/hierarchy_train.csv', index=True)
+    df_test.to_csv('../../data/processed/hierarchy_test.csv', index=True)
 
     with open('../../src/utils/hierarchy_dict.json', 'w') as f:
         json.dump(hierarchy_dict, f)

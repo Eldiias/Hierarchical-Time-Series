@@ -4,6 +4,12 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
+def rolling_orders_6(x):
+    """Check if average non-zero invoices in rolling windows exceeds threshold"""
+    ts = x.set_index('Date').sort_index().Invoiced_Quantity
+    # Count non-zero values in each window
+    return (ts > 0).rolling(6).sum().mean() > 2
+
 def transform_data(df):
     """
     Transforms plant order data to analyze customer ordering patterns.
@@ -32,13 +38,6 @@ def transform_data(df):
     df = df.copy()  # Avoid modifying the input DataFrame
     df['Date'] = pd.to_datetime(df['Date'])
     df = df.query('Monday_number == 5').drop(columns=['Monday_number'])
-    
-    # Define function to check if customer meets rolling order criteria
-    def rolling_orders_6(x):
-        """Check if average non-zero invoices in rolling windows exceeds threshold"""
-        ts = x.set_index('Date').sort_index().Invoiced_Quantity
-        # More efficient way to count non-zero values in each window
-        return ts.rolling(6).apply(lambda x: (x > 0).sum()).mean() > 2
     
     # Get customers meeting the condition
     condition1 = df.groupby('customer_id').apply(rolling_orders_6)
